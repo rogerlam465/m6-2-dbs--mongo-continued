@@ -1,5 +1,7 @@
 const router = require("express").Router();
 
+const { getSeats, bookSeats } = require('./handlers');
+
 const NUM_OF_ROWS = 8;
 const SEATS_PER_ROW = 12;
 
@@ -21,6 +23,8 @@ const getRowName = (rowIndex) => {
   return String.fromCharCode(65 + rowIndex);
 };
 
+// the goal is to remove this entirely.
+
 const randomlyBookSeats = (num) => {
   const bookedSeats = {};
 
@@ -40,64 +44,59 @@ const randomlyBookSeats = (num) => {
 
 let state;
 
-router.get("/api/seat-availability", async (req, res) => {
-  if (!state) {
-    state = {
-      bookedSeats: randomlyBookSeats(30),
-    };
-  }
+// ok. This is it. This is what needs to be modified to be Mongo-friendly.
+// we'll need to change the logic to match the new object schema.
 
-  return res.json({
-    seats: seats,
-    bookedSeats: state.bookedSeats,
-    numOfRows: 8,
-    seatsPerRow: 12,
-  });
-});
+router.get("/api/seat-availability", getSeats);
 
 let lastBookingAttemptSucceeded = false;
 
-router.post("/api/book-seat", async (req, res) => {
-  const { seatId, creditCard, expiration } = req.body;
+// ok. so this checks for if the seat is already booked.
+// checks for if there's a CC and expiry, we can leave that.
+// books the seat if all is well.
+router.post("/api/book-seat", bookSeats);
 
-  if (!state) {
-    state = {
-      bookedSeats: randomlyBookSeats(30),
-    };
-  }
+// router.post("/api/book-seat", async (req, res) => {
+//   const { seatId, creditCard, expiration } = req.body;
 
-  await delay(Math.random() * 3000);
+//   if (!state) {
+//     state = {
+//       bookedSeats: randomlyBookSeats(30),
+//     };
+//   }
 
-  const isAlreadyBooked = !!state.bookedSeats[seatId];
-  if (isAlreadyBooked) {
-    return res.status(400).json({
-      message: "This seat has already been booked!",
-    });
-  }
+//   await delay(Math.random() * 3000);
 
-  if (!creditCard || !expiration) {
-    return res.status(400).json({
-      status: 400,
-      message: "Please provide credit card information!",
-    });
-  }
+//   const isAlreadyBooked = !!state.bookedSeats[seatId];
+//   if (isAlreadyBooked) {
+//     return res.status(400).json({
+//       message: "This seat has already been booked!",
+//     });
+//   }
 
-  if (lastBookingAttemptSucceeded) {
-    lastBookingAttemptSucceeded = !lastBookingAttemptSucceeded;
+//   if (!creditCard || !expiration) {
+//     return res.status(400).json({
+//       status: 400,
+//       message: "Please provide credit card information!",
+//     });
+//   }
 
-    return res.status(500).json({
-      message: "An unknown error has occurred. Please try your request again.",
-    });
-  }
+//   if (lastBookingAttemptSucceeded) {
+//     lastBookingAttemptSucceeded = !lastBookingAttemptSucceeded;
 
-  lastBookingAttemptSucceeded = !lastBookingAttemptSucceeded;
+//     return res.status(500).json({
+//       message: "An unknown error has occurred. Please try your request again.",
+//     });
+//   }
 
-  state.bookedSeats[seatId] = true;
+//   lastBookingAttemptSucceeded = !lastBookingAttemptSucceeded;
 
-  return res.status(200).json({
-    status: 200,
-    success: true,
-  });
-});
+//   state.bookedSeats[seatId] = true;
+
+//   return res.status(200).json({
+//     status: 200,
+//     success: true,
+//   });
+// });
 
 module.exports = router;
